@@ -16,9 +16,9 @@ var GameResult = {
 
 var GameLevel = {
     EASY: 5,
-    NORMAL: 10,
-    HARD: 15,
-    INSANE: 20
+    NORMAL: 7,
+    HARD: 10,
+    INSANE: 15
 };
 
 var GameSize = {
@@ -44,6 +44,59 @@ var Maximind = {
 
     end: function() {
         GameController.game.status = GameStatus.END;
+    },
+
+    setup: function(levels) {
+        while (levels.firstChild) {
+            levels.removeChild(levels.firstChild);
+        }
+        for (var l in GameLevel) {
+            var level = document.createElement('option');
+            level.innerText = l;
+            levels.appendChild(level)
+        }
+        levels.addEventListener('change', function(e) {
+            Settings.gameLevel = GameLevel[e.target.value];
+            SettingsStorage.setSettings('level', Settings.gameLevel);
+            GameController.newGame();
+        });
+        //
+        var savedLevel = SettingsStorage.getSetting('level');
+        if (savedLevel) {
+            levels.value = savedLevel;
+        }
+    }
+};
+
+var SettingsStorage = {
+    all: null,
+    readAll: function() {
+        this.all = [];
+        var cookie = document.cookie;
+        for (var s in cookie.split(';')) {
+            var parts = s.split('=');
+            if (parts.length < 2) {
+                continue;
+            }
+            var key = parts[0].replace(/^\s+|\s+$/gm,'');
+            var value = parts[1].replace(/^\s+|\s+$/gm,'');
+            this.all[key] = value;
+        }
+    },
+    getSetting: function(key) {
+        if (this.all == null) {
+            this.readAll();
+        }
+        return this.all[name];
+    },
+    setSettings: function(key, value) {
+        if (this.all == null) {
+            this.readAll();
+        }
+        this.all[key] = value;
+        var s = key + '=' + value + '; expires=Thu, 18 Dec 2100 12:00:00 UTC';
+        console.log(s);
+        document.cookie = s;
     }
 };
 
@@ -73,7 +126,7 @@ var GameController = {
         this.createGameBoard();
         setTimeout(function() {
             GameController.startGame();
-        }, 200);
+        }, 500);
     },
 
     startGame: function() {
@@ -137,8 +190,10 @@ var GameController = {
         cell.setAttribute('col', col);
         cell.setAttribute('row', row);
         cell.addEventListener('click', function(e) {
+            if (GameController.game && GameController.game.status != GameStatus.END) {
+                e.stopPropagation();
+            }
             GameController.onCellClick(e.target);
-            e.stopPropagation();
         });
         return cell;
     },
@@ -193,6 +248,7 @@ var Game = function(){
 };
 
 window.addEventListener('load', function(){
+    Maximind.setup(document.getElementById('level'));
     Maximind.init(document.getElementById('game-board'));
     Maximind.start();
 });
